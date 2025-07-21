@@ -55,9 +55,9 @@ Teslamate 是整个服务的数据基础，必须首先部署。推荐使用 Doc
 ### 第二步：配置并运行后端服务
 
 后端服务负责连接数据库并提供 API。
-
-1.  **修改配置文件**: 打开后端项目的核心配置文件 `src/main/resources/application.yml`。
-2.  **配置数据库连接**:
+1.  **更新数据库结构**: 在运行后端服务之前，您需要先连接到 Teslamate 的 PostgreSQL 数据库（可以使用 Navicat、DBeaver 等工具），并执行项目根目录下 `db/update.sql` 文件中的 SQL 脚本。这个脚本会新增一张应用所需的表，并修改一个现有的表字段。
+2.  **修改配置文件**: 打开后端项目的核心配置文件 `src/main/resources/application.yml`。
+3.  **配置数据库连接**:
     ```yaml
     spring:
       datasource:
@@ -65,7 +65,7 @@ Teslamate 是整个服务的数据基础，必须首先部署。推荐使用 Doc
         username: teslamate
         password: <您在docker-compose.yml中设置的数据库密码>
     ```
-3.  **配置系统参数 (`sys.config`)**:
+4.  **配置系统参数 (`sys.config`)**:
     ```yaml
     sys:
       config:
@@ -94,14 +94,14 @@ Teslamate 是整个服务的数据基础，必须首先部署。推荐使用 Doc
         # 钉钉 Webhook 机器人 Token (用于推送行程结束等通知)
         webhookToken: 
     ```
-4.  **获取 `openId`**:
+5.  **获取 `openId`**:
     * 由于小程序为个人使用，通过 `openId` 进行身份验证。
     * **首先**，将 `openId` 字段留空，启动后端服务。
     * **然后**，打开微信小程序，触发登录请求（通常是打开小程序时自动触发）。
     * **最后**，查看后端服务的控制台日志，您会看到类似 `获取到openId: [一长串字符]` 的输出。
     * 将这串字符复制并填写到 `application.yml` 的 `openId` 字段中，然后重启后端服务。
 
-5.  **运行后端**: 使用 Maven 运行 `mvn spring-boot:run` 或打包成 JAR 文件 `java -jar your-app.jar` 在服务器上运行。
+6.  **运行后端**: 使用 Maven 运行 `mvn spring-boot:run` 或打包成 JAR 文件 `java -jar your-app.jar` 在服务器上运行。
 
 ### 第三步：配置并发布小程序
 
