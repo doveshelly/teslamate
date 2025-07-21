@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.doveshelly.teslamate.mapper.ParkingMapper">
+
+    <select id="findParkingSessionsByMonth" resultType="cn.doveshelly.teslamate.data.ParkingSession">
+         -- 步骤1: 使用 LEAD 函数定义出每次停车的起止时间窗口
+        WITH parking_intervals AS (
+            SELECT
+                d.id as drive_id,
+                d.car_id,
+                d.end_position_id,
+                d.end_date AS parking_start_date,
+                LEAD(d.start_date, 1) OVER (PARTITION BY d.car_id ORDER BY d.start_date) AS parking_end_date
+            FROM drives d
+            WHERE d.car_id = #{carId}
+        )
+        -- 步骤2: 关联查询，获取最终结果
+        SELECT
+            pi.drive_id,
+            pi.car_id,
+            start_pos.latitude,
+            start_pos.longitude,
+            pi.parking_start_date,
+            pi.parking_end_date,
+            EXTRACT(EPOCH FROM (pi.parking_end_date - pi.parking_start_date)) AS parking_duration_seconds,
+            start_pos.usable_battery_level AS battery_level_start,
+            start_pos.est_battery_range_km AS range_km_start,
+            -- 关键改动：从 end_pos 子查询中获取停车结束时的数据
+            end_pos.usable_battery_level AS battery_level_end,
+            end_pos.est_battery_range_km AS range_km_end
+        FROM
+            parking_intervals pi
+        -- 关联 positions 表获取停车开始时的准确数据 (这部分总是可靠的)
+        JOIN
+            positions start_pos ON pi.end_position_id = start_pos.id
+        -- 使用 LATERAL JOIN 智能查找停车结束时的第一条有效数据
+        , LATERAL (
+            SELECT
+                p.usable_battery_level,
+                p.est_battery_range_km
+            FROM positions p
+            WHERE
+                p.car_id = pi.car_id AND
+                p.date >= pi.parking_end_date AND
+                p.usable_battery_level IS NOT NULL AND
+                p.est_battery_range_km IS NOT NULL
+            ORDER BY p.date ASC
+            LIMIT 1
+        ) end_pos
+        WHERE
+            pi.parking_end_date IS NOT NULL
+            AND to_char(pi.parking_start_date, 'YYYY-MM') = #{month}
+            AND (pi.parking_end_date - pi.parking_start_date) > interval '5 minutes'
+        ORDER BY
+            pi.parking_start_date DESC
+    </select>
+</mapper>

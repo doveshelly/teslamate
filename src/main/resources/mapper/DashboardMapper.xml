@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.doveshelly.teslamate.mapper.DashboardMapper">
+    <select id="getSimplifiedMetrics" resultType="java.util.Map">
+            SELECT
+                -- 使用子查询分别从 drives 表和 charges 表获取数据
+                (SELECT COUNT(*) FROM drives WHERE car_id = #{carId} AND start_date >= #{startDate} AND start_date &lt; #{endDate}) AS drive_count,
+                (SELECT COALESCE(SUM(distance), 0) FROM drives WHERE car_id = #{carId} AND start_date >= #{startDate} AND start_date &lt; #{endDate}) AS total_distance,
+                (SELECT COALESCE(SUM(duration_min), 0) FROM drives WHERE car_id = #{carId} AND start_date >= #{startDate} AND start_date &lt; #{endDate}) AS total_duration_min,
+                (SELECT COALESCE(SUM(pos.battery_level), 0) FROM drives d LEFT JOIN positions pos ON d.start_position_id = pos.id WHERE
+        d.car_id = #{carId} AND d.start_date >= #{startDate} AND d.start_date &lt; #{endDate}) AS total_start_battery,
+                (SELECT COALESCE(SUM(pos.battery_level), 0) FROM drives d LEFT JOIN positions pos ON d.end_position_id = pos.id WHERE
+        d.car_id = #{carId} AND d.start_date >= #{startDate} AND d.start_date &lt; #{endDate}) AS total_end_battery,
+                (SELECT COUNT(*) FROM charging_processes WHERE car_id = #{carId} AND start_date >= #{startDate} AND start_date &lt; #{endDate}) AS charge_count,
+                (SELECT COALESCE(SUM(charge_energy_added), 0) FROM charging_processes WHERE car_id = #{carId} AND start_date >= #{startDate} AND start_date &lt; #{endDate}) AS total_charge_energy
+        </select>
+
+
+    <select id="getDailyDriveStats" resultType="java.util.Map">
+        SELECT
+            DATE(start_date) AS day,
+            SUM(distance) AS daily_distance
+        FROM drives
+        WHERE car_id = #{carId}
+          AND start_date >= #{startDate}
+          AND start_date &lt; #{endDate}
+        GROUP BY DATE(start_date)
+    </select>
+
+    <select id="getDailyChargeDates" resultType="java.time.LocalDate">
+        SELECT DISTINCT DATE(date)
+        FROM charges
+        WHERE  date >= #{startDate}
+          AND date &lt; #{endDate}
+    </select>
+</mapper>

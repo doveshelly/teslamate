@@ -1,0 +1,58 @@
+package cn.doveshelly.teslamate.task;
+
+import cn.doveshelly.teslamate.bo.DriveDTO;
+import cn.doveshelly.teslamate.mapper.DrivesMapper;
+import cn.doveshelly.teslamate.utils.CommonUtils;
+import cn.hutool.core.collection.CollUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+
+@Slf4j
+@Component
+public class AlertTask {
+
+    @Autowired
+    private DrivesMapper drivesMapper;
+
+    @Autowired
+    private CommonUtils commonUtils;
+
+    @Value("${alert.enabled}")
+    public boolean enabled;
+
+
+    /**
+     * 推送行程
+     *
+     * @return
+     * @throws Exception
+     */
+    @Scheduled(fixedRate = 60000)
+    public void pushAlertMessage() {
+        if (!enabled) {
+            return;
+        }
+        List<DrivesMapper.DriveDetailView> list = drivesMapper.findNeedPushDriveDetails();
+
+        if (CollUtil.isEmpty(list)) {
+            log.info("未通知行程数量为0.");
+            return;
+        }
+        log.info("未通知行程数量为{}.", list.size());
+
+        for (DrivesMapper.DriveDetailView driveDetailView : list) {
+            driveDetailView.setStartDate(CommonUtils.toBeijingTime(driveDetailView.getStartDate()));
+            driveDetailView.setEndDate(CommonUtils.toBeijingTime(driveDetailView.getEndDate()));
+            DriveDTO driveDTO = commonUtils.convertToDto(driveDetailView);
+            commonUtils.sendTextMessage(driveDTO.toString(), false, null);
+
+            drivesMapper.updatePushResult(driveDetailView.getId(), "01");
+        }
+    }
+}
