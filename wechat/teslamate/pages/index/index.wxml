@@ -1,0 +1,182 @@
+<view class="container" wx:if="{{isLoggedIn === '1'}}">
+  <view class="header">
+    <view class="title-container"><text class="title">我的报告</text></view>
+  </view>
+  <view class="date-picker-wrapper">
+    <picker mode="date" fields="month" value="{{currentDate}}" start="2023-01" end="2025-12" bindchange="onDateChange">
+      <view class="date-picker-content"><text>{{formattedDate}}</text>
+        <view class="arrow-down"></view>
+      </view>
+    </picker>
+  </view>
+  <view class="tabs">
+    <view wx:for="{{tabs}}" wx:key="id" class="tab-item {{currentTab === item.id ? 'active' : ''}}" bindtap="switchTab" data-id="{{item.id}}">{{item.name}}</view>
+  </view>
+
+  <block wx:if="{{currentTab === 'drives'}}">
+    <view class="empty-list" wx:if="{{displayList.length === 0}}"><text>该月份无行程记录</text></view>
+    <view class="trip-list" wx:else>
+      <view class="date-group" wx:for="{{displayList}}" wx:key="date">
+        <view class="date-header">{{item.date}}</view>
+        <view class="card trip-card" wx:for="{{item.records}}" wx:for-item="record" wx:key="id">
+          <view class="card-header">
+            <view class="locations">
+              <view class="location-row">
+                <view class="icon-wrapper">
+                  <view class="icon-circle start">起</view>
+                </view><text class="location-text">{{record.startLocation}}</text>
+              </view>
+              <view class="location-row" wx:if="{{record.endLocation}}">
+                <view class="icon-wrapper">
+                  <view class="dotted-line"></view>
+                  <view class="icon-circle end">终</view>
+                </view><text class="location-text">{{record.endLocation}}</text>
+              </view>
+            </view>
+            <view class="data-link trip-data-link"><text>行车数据</text></view>
+          </view>
+          <block wx:if="{{record.dateTime}}">
+            <view class="card-body">
+              <view class="time-info">{{record.dateTime}}</view>
+              <view class="stats-grid">
+                <view class="stat-item">
+                  <view class="stat-value">{{record.powerConsumption}}<text class="unit">度</text></view>
+                  <view class="stat-label">消耗电量</view>
+                </view>
+                <view class="stat-item">
+                  <view class="stat-value">{{record.estimatedCost}}<text class="unit">元</text></view>
+                  <view class="stat-label">预计费用</view>
+                </view>
+                <view class="stat-item">
+                  <view class="stat-value">{{record.distance}}<text class="unit">km</text></view>
+                  <view class="stat-label">行驶里程</view>
+                </view>
+                <view class="stat-item">
+                  <view class="stat-value change">{{record.rangeChange}}<text class="unit">km</text></view>
+                  <view class="stat-label">里程变化</view>
+                </view>
+                <view class="stat-item">
+                  <view class="stat-value">{{record.avgConsumption}}<text class="unit">wh/km</text></view>
+                  <view class="stat-label">平均能耗</view>
+                </view>
+                <view class="stat-item">
+                  <view class="stat-value change">{{record.batteryChange}}</view>
+                  <view class="stat-label">电量变化</view>
+                </view>
+              </view>
+            </view>
+          </block>
+        </view>
+      </view>
+
+    </view>
+  </block>
+
+  <block wx:elif="{{currentTab === 'charges'}}">
+    <view class="empty-list" wx:if="{{displayList.length === 0}}"><text>该月份无充电记录</text></view>
+    <view class="charge-list" wx:else>
+      <view class="date-group" wx:for="{{displayList}}" wx:key="date">
+        <view class="date-header">{{item.date}}</view>
+        <view class="card charge-card" wx:for="{{item.records}}" wx:for-item="record" wx:key="id">
+          <view class="card-header">
+            <view class="location-row"><text class="charge-icon">⚡️</text><text class="location-text">{{record.location}}</text></view>
+            <view class="charge-tag">{{record.type}}</view>
+          </view>
+          <view class="card-body">
+            <view class="time-info">{{record.dateTime}}</view>
+            <view class="stats-grid charge-stats">
+              <view class="stat-item">
+                <view class="stat-value">{{record.chargeAmount}}<text class="unit">kWh</text></view>
+                <view class="stat-label">充电量</view>
+              </view>
+              <view class="stat-item">
+                <view class="stat-value">{{record.cost}}<text class="unit">元</text></view>
+                <view class="stat-label">费用</view>
+              </view>
+              <view class="stat-item">
+                <view class="stat-value change">{{record.batteryChange}}</view>
+                <view class="stat-label">电量变化</view>
+              </view>
+              <view class="stat-item">
+                <view class="stat-value">{{record.avgPower}}<text class="unit">kW</text></view>
+                <view class="stat-label">平均功率</view>
+              </view>
+              <view class="stat-item">
+                <view class="stat-value">{{record.rangeAdded}}<text class="unit">km</text></view>
+                <view class="stat-label">增加里程</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:elif="{{currentTab === 'parks'}}">
+    <view class="empty-list" wx:if="{{displayList.length === 0}}"><text>该月份无停车记录</text></view>
+    <view class="parking-list" wx:else>
+      <view class="date-group" wx:for="{{displayList}}" wx:key="date">
+        <view class="date-header">{{item.date}}</view>
+        <view class="card park-card" wx:for="{{item.records}}" wx:for-item="record" wx:key="id">
+          <view class="card-header">
+            <view class="location-row">
+              <view class="parking-tag">停车场</view><text class="location-text">{{record.location}}</text>
+            </view>
+            <view class="data-link parking-data-link"><text>停车数据</text></view>
+          </view>
+          <view class="card-body">
+            <view class="time-info">{{record.dateTime}}</view>
+            <view class="stats-grid park-stats">
+              <view class="stat-item">
+                <view class="stat-value">{{record.consumption}}<text class="unit">度</text></view>
+                <view class="stat-label">消耗电量</view>
+              </view>
+              <view class="stat-item">
+                <view class="stat-value change">{{record.batteryChange}}</view>
+                <view class="stat-label">电量变化</view>
+              </view>
+              <view class="stat-item">
+                <view class="stat-value">{{record.cost}}<text class="unit">元</text></view>
+                <view class="stat-label">预估费用</view>
+              </view>
+              <view class="stat-item">
+                <view class="stat-value change">{{record.rangeChange}}</view>
+                <view class="stat-label">里程变化</view>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <block wx:if="{{currentTab === 'summary'}}">
+    <view class="all-tab-container">
+
+      <view class="metrics-section">
+        <view class="metric-item" wx:for="{{monthData.metrics}}" wx:key="index">
+          <view class="metric-item__value">{{item.value}}</view>
+          <view class="metric-item__label">{{item.label}}</view>
+        </view>
+      </view>
+
+      <view class="calendar-section">
+        <view class="calendar-header">
+          <view class="calendar-header__day" wx:for="{{['一', '二', '三', '四', '五', '六', '日']}}" wx:key="index">{{item}}</view>
+        </view>
+        <view class="calendar-grid">
+          <view class="calendar-day {{item.isActive ? '' : 'inactive'}}" wx:for="{{monthData.calendarDays}}" wx:key="index">
+            <view class="calendar-day__number">{{item.day}}</view>
+            <view class="calendar-day__distance">{{item.distance}}</view>
+            <view wx:if="{{item.hasCharge}}" class="calendar-day__charge-icon">⚡️</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>
+
+<!-- 加一个全局的加载提示 -->
+<view class="loading-container" wx:if="{{isLoggedIn === '2'}}">
+  暂无权限
+</view>

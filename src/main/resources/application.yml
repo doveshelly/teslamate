@@ -65,8 +65,8 @@ sys:
     appSecret:
     #小程序自己的openId，需要本地运行后台服务，打开小程序请求登录接口，查看日志获取，用于登录
     openId:
-    #前后端接口签名认证，前后端保持一致即可
-    signSecret:
+    #前后端接口签名认证，前后端保持一致即可，自定义
+    signSecret: 1234qwerasdfzxcv1234awerasdfzxc
     #根据经纬度查询具体位置，https://lbsyun.baidu.com/apiconsole/key，自己注册登录开通服务，每天300次逆地理编码调用限制
     baiduKey:
     #用于推送行程通知到钉钉，具体百度了解如何使用钉钉webhook机器人
