@@ -14,3 +14,6 @@ create index gps_latitude_longitude_index on gps (latitude, longitude);
 --新增推送结果字段，防止重复推送
 alter table drives add push_result varchar(2) default '00';
 create index drives_push_result_index on drives (push_result);
+
+--新增索引
+CREATE INDEX idx_positions_date_car ON positions (car_id, date);

@@ -67,7 +67,7 @@ public class ParkingController {
                 })
                 // 步骤2: (核心) 添加 filter 操作，过滤掉不符合条件的记录。
                 // 注意：这里我们假设停车是耗电的，所以开始电量 > 结束电量。
-                .filter(detail -> detail.getBatteryLevelStart() > detail.getBatteryLevelEnd())
+                .filter(detail -> detail.getBatteryLevelStart() >= detail.getBatteryLevelEnd())
                 // 步骤3: 对已经过滤和处理过的数据流进行分组。
                 .collect(Collectors.groupingBy(
                         // 分组的 key 提取逻辑现在非常纯粹，只负责返回 key。
