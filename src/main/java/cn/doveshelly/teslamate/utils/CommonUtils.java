@@ -23,6 +23,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 @Slf4j
@@ -33,6 +34,11 @@ public class CommonUtils {
 
     @Autowired
     private GpsMapper gpsMapper;
+    
+    // 百度地图API限流控制 - 最后一次调用时间
+    private static final AtomicLong lastApiCallTime = new AtomicLong(0);
+    // API调用间隔（毫秒），假设TPS=1，即每秒最多1次调用
+    private static final long API_CALL_INTERVAL_MS = 200;
 
     public String getAddress(String latitude, String longitude) {
         //先从数据库查
@@ -43,22 +49,56 @@ public class CommonUtils {
 
         String name = null;
         try {
+            // API限流控制
+            rateLimitApiCall();
+            
+            // 构建百度地图逆地理编码API请求URL
             String url = "http://api.map.baidu.com/reverse_geocoding/v3/?ak={}&output=json&coordtype=wgs84ll&location={},{}&extensions_poi=1&radius=100";
             String json = HttpUtil.get(StrUtil.format(url, commonConfig.getBaiduKey(), latitude, longitude));
-            JSONObject jsonObject = JSONUtil.parseObj(json);
-            JSONObject poi = (JSONObject) jsonObject.getJSONObject("result").getJSONArray("pois").get(0);
-            name = poi.getStr("name");
+            log.debug("百度地图API响应: {}", json);
+            
+            if (StrUtil.isBlank(json)) {
+                log.warn("百度地图API返回空响应，坐标: ({}, {})", latitude, longitude);
+                name = "未知位置";
+            } else {
+                JSONObject jsonObject = JSONUtil.parseObj(json);
+                
+                // 检查API响应状态
+                Integer status = jsonObject.getInt("status");
+                if (status == null || status != 0) {
+                    log.warn("百度地图API返回错误状态: {}, 坐标: ({}, {})", status, latitude, longitude);
+                    name = "未知位置";
+                } else {
+                    JSONObject result = jsonObject.getJSONObject("result");
+                    if (result != null && result.getJSONArray("pois") != null && !result.getJSONArray("pois").isEmpty()) {
+                        JSONObject poi = (JSONObject) result.getJSONArray("pois").get(0);
+                        name = poi.getStr("name");
+                        if (StrUtil.isBlank(name)) {
+                            name = "未知位置";
+                        }
+                    } else {
+                        log.warn("百度地图API未返回POI信息，坐标: ({}, {})", latitude, longitude);
+                        name = "未知位置";
+                    }
+                }
+            }
         } catch (Exception e) {
-            log.info("获取经纬度失败.");
-            throw new RuntimeException(e);
+            log.error("调用百度地图API获取地址失败，坐标: ({}, {})", latitude, longitude, e);
+            name = "未知位置";
         }
 
-        //将查出来的数据插入过去
-        Gps gps = new Gps();
-        gps.setLatitude(latitude);
-        gps.setLongitude(longitude);
-        gps.setAddress(name);
-        gpsMapper.insert(gps);
+        // 将查询结果缓存到数据库
+        try {
+            Gps gps = new Gps();
+            gps.setLatitude(latitude);
+            gps.setLongitude(longitude);
+            gps.setAddress(name);
+            gpsMapper.insert(gps);
+            log.debug("地址信息已缓存到数据库: {} -> {}", latitude + "," + longitude, name);
+        } catch (Exception e) {
+            log.error("保存地址信息到数据库失败，坐标: ({}, {}), 地址: {}", latitude, longitude, name, e);
+            // 数据库保存失败不影响返回结果
+        }
 
         return name;
     }
@@ -157,5 +197,29 @@ public class CommonUtils {
         }
 
         return dto;
+    }
+    
+    /**
+     * API限流控制方法
+     * 确保两次API调用之间有足够的时间间隔
+     */
+    private void rateLimitApiCall() {
+        long currentTime = System.currentTimeMillis();
+        long lastCallTime = lastApiCallTime.get();
+        long timeSinceLastCall = currentTime - lastCallTime;
+        
+        if (timeSinceLastCall < API_CALL_INTERVAL_MS) {
+            long sleepTime = API_CALL_INTERVAL_MS - timeSinceLastCall;
+            try {
+                log.debug("API限流控制：等待 {} 毫秒后调用", sleepTime);
+                Thread.sleep(sleepTime);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("API限流等待被中断", e);
+            }
+        }
+        
+        // 更新最后调用时间
+        lastApiCallTime.set(System.currentTimeMillis());
     }
 }
