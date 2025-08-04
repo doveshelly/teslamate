@@ -40,6 +40,15 @@ public class DrivesController {
         if (driveDetails == null || driveDetails.isEmpty()) {
             return CommonResult.success(Collections.emptyList());
         }
+        
+        // 过滤掉1分钟以内的行驶记录
+        driveDetails = driveDetails.stream()
+                .filter(detail -> detail.getDurationMin() != null && detail.getDurationMin() >= 1)
+                .collect(Collectors.toList());
+        
+        if (driveDetails.isEmpty()) {
+            return CommonResult.success(Collections.emptyList());
+        }
 
         // 定义日期分组的 Key 的格式，例如 "07-16"
         DateTimeFormatter groupByFormatter = DateTimeFormatter.ofPattern("MM-dd");
