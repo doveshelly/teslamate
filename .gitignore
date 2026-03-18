@@ -1,0 +1,42 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build
+target/
+build/
+dist/
+*.class
+*.jar
+*.war
+
+# Dependencies
+node_modules/
+vendor/
+.bundle/
+
+# Environment
+.env
+.env.local
+*.pem
+
+# Logs
+logs/
+out/
+META-INF/
+*.log
+npm-debug.log*
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+.cache/
+src/main/resources/META-INF/MANIFEST.MF
